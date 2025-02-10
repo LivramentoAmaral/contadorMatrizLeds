@@ -7,8 +7,11 @@ Perfeito! Agora vou adicionar a instrução sobre como compilar o projeto utiliz
 Este projeto exibe números de **0 a 10** em uma **matriz 5x5** de LEDs **WS2812 (Neopixel)** usando um **Raspberry Pi Pico**.  
 A comunicação com os LEDs é feita através do **PIO (Programmable I/O)**, garantindo eficiência na atualização das cores.  
 
-![WS2812 LED Matrix](https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Neopixel_matrix_8x8.jpg/250px-Neopixel_matrix_8x8.jpg)  
-*(Imagem ilustrativa de uma matriz WS2812 - Neopixel)*  
+## WS2812 LED Matrix 
+
+<p align="center">
+  <img src="assets/matriz.jpeg" alt="Logo do Projeto" width="200" height="200" />
+</p>
 
 ---
 
