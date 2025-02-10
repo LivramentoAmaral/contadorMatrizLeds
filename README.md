@@ -1,6 +1,4 @@
-Perfeito! Agora vou adicionar a instrução sobre como compilar o projeto utilizando a extensão do **Raspberry Pi Pico SDK** no VS Code, simplesmente clicando em **Compile Project**. Veja a versão atualizada do seu README:
 
----
 
 # 🎨 WS2812 Number Display - Raspberry Pi Pico  
 
