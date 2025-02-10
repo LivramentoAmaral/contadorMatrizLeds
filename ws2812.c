@@ -1,34 +1,38 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include "ws2812.pio.h"
 
-// Configurações para LEDs WS2812
-#define IS_RGBW false // LEDs RGB
-#define NUM_PIXELS 25 // Matriz 5x5 de LEDs
-#define WS2812_PIN 7  // Pino para os LEDs WS2812
+#define LED_PIN 7       // GPIO para os LEDs WS2812
+#define BTN_START 5     // Botão de início
+#define BTN_STOP 6      // Botão de parada
+#define NUM_PIXELS 25   // Matriz 5x5 de LEDs
 
-// Função para enviar dados de cor ao LED
-static inline void put_pixel(uint32_t pixel_grb) {
-    // Reduz a potência do LED dividindo os valores RGB por 4
+volatile bool counting = false;  // Variável para controlar a contagem
+
+// Inicializa o PIO para controlar os LEDs WS2812
+void init_ws2812(PIO pio, int sm) {
+    uint offset = pio_add_program(pio, &ws2812_program);
+    ws2812_program_init(pio, sm, offset, LED_PIN, 800000, false);
+}
+
+// Função para reduzir a potência do LED
+static inline void put_pixel(uint32_t pixel_grb)
+{
     uint8_t r = (pixel_grb >> 16) & 0xFF;
     uint8_t g = (pixel_grb >> 8) & 0xFF;
     uint8_t b = pixel_grb & 0xFF;
+
+    // Reduz o brilho dos LEDs
     r /= 32;
     g /= 32;
     b /= 32;
+
     uint32_t dimmed_pixel = ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
     pio_sm_put_blocking(pio0, 0, dimmed_pixel << 8u);
 }
 
-// Função para gerar um valor RGB de 24 bits para cada LED
-static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b)
-{
-    return ((uint32_t)(r) << 8) | ((uint32_t)(g) << 16) | (uint32_t)(b);
-}
 
-// Padrões para números de 0 a 9 usando uma matriz 5x5
+// Padrões de números 0-10 para a matriz 5x5
 const uint8_t numbers[11][25] = {
     {// 0
      1, 1, 1, 1, 1,
@@ -99,39 +103,79 @@ const uint8_t numbers[11][25] = {
 
 };
 
+
 // Função para exibir um número na matriz 5x5
-void display_number(int num)
-{
-    for (int i = 0; i < NUM_PIXELS; i++)
-    {
-        if (numbers[num][i])
-        {
-            put_pixel(urgb_u32(0xff, 0xff, 0xff));
-        }
-        else
-        {
-            put_pixel(urgb_u32(0, 0, 0)); // Desliga o LED
-        }
+void display_number(int num) {
+    for (int i = 0; i < NUM_PIXELS; i++) {
+        uint32_t color = numbers[num][i] ? 0x3A0986 : 0x000000; // Roxo escuro ou apagado
+        put_pixel(color);
     }
-    sleep_ms(1000); // Pausa de 1 segundo para exibir o número
+    sleep_ms(1000);
 }
 
-int main()
-{
-    stdio_init_all();
-    printf("WS2812 Number Display\n");
+// Função para debouncing do botão
+bool button_pressed(uint gpio) {
+    if (gpio_get(gpio) == 0) {  // Botão pressionado (nível lógico baixo)
+        sleep_ms(50);  // Delay para debounce
+        if (gpio_get(gpio) == 0) { // Confirma se ainda está pressionado
+            while (gpio_get(gpio) == 0);  // Aguarda o botão ser solto
+            return true;
+        }
+    }
+    return false;
+}
 
-    // Configuração do PIO para os LEDs WS2812
+int main() {
+    stdio_init_all();
+
+    // Configuração dos botões
+    gpio_init(BTN_START);
+    gpio_set_dir(BTN_START, GPIO_IN);
+    gpio_pull_up(BTN_START);
+
+    gpio_init(BTN_STOP);
+    gpio_set_dir(BTN_STOP, GPIO_IN);
+    gpio_pull_up(BTN_STOP);
+
+    // Inicializa WS2812
     PIO pio = pio0;
     int sm = 0;
-    uint offset = pio_add_program(pio, &ws2812_program);
-    ws2812_program_init(pio, sm, offset, WS2812_PIN, 800000, IS_RGBW);
-    while (1)
-    {
-        for (int i = 0; i < 11; i++)
-        {
-            display_number(i); // Exibe os números de 0 a 9
-            sleep_ms(500);     // Pausa entre os números
+    init_ws2812(pio, sm);
+
+    while (true) {
+        // Se o botão de início for pressionado, começa a contagem
+        if (button_pressed(BTN_START)) {
+            counting = true;
+            printf("Contagem iniciada!\n");
+        }
+
+        // Se o botão de pausa for pressionado, para a contagem
+        if (button_pressed(BTN_STOP)) {
+            counting = false;
+            printf("Contagem pausada!\n");
+        }           
+
+        // Se estiver contando, exibe os números de 0 a 9
+        if (counting) {
+            for (int i = 0; i < 11;i++) {
+                if (!counting) break;  // Verifica a variável antes de exibir o próximo número
+                display_number(i);
+
+                // Pequeno delay e verificação do botão de pausa durante a contagem
+                for (int j = 0; j < 50; j++) {  // Verifica 50x enquanto espera 500ms
+                    if (button_pressed(BTN_STOP)) {
+                        counting = false;
+                        printf("Contagem pausada!\n");
+                        break;
+                    }
+                    sleep_ms(10);  // Pequenos atrasos para verificar o botão
+                }
+
+                if (!counting) break;  // Sai do loop de exibição se counting for falso
+            }
+        } else {
+            sleep_ms(100); // Pequeno delay para evitar alto consumo de CPU
         }
     }
 }
+
