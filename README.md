@@ -101,7 +101,7 @@ make
 ## 🎬 Demonstração  
 
 📺 **Assista ao vídeo demonstrativo do projeto:**  
-🔗 [Clique aqui para ver o vídeo](https://youtu.be/seu-video-aqui)  
+🔗 [Clique aqui para ver o vídeo](https://www.youtube.com/watch?v=MQz7sDOH-3Q&ab_channel=MarcosdoAmaral)  
 
 ---
 
